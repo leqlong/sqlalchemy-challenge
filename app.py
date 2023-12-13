@@ -38,12 +38,53 @@ app = Flask(__name__)
 #################################################
 @app.route("/")
 def welcome():
-    """Check out the max temperature, min temperature and average temperature in a day or a few days."""
+    """List all available api routes."""
     return (
-        f"Available Routes (Please use YYYY-MM-DD format):<br/>"
-        f"/api/v1.0/(start date)<br/>"
-        f"/api/v1.0/(start date)/(end date)<br/>"
+        f"Available Routes:<br/>"
+        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/(start date YYYY-MM-DD)<br/>"
+        f"/api/v1.0/(start date YYYY-MM-DD)/(end date YYYY-MM-DD)<br/>"
     )
+
+@app.route("/api/v1.0/precipitation")
+def precipitation():
+    """Return the precipitation data for the last year"""
+    # Calculate the date one year from the last date in the database
+    one_year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    # Query for the date and precipitation for the last year
+    results = session.query(Measurement.date, Measurement.prcp).\
+        filter(Measurement.date >= one_year_ago).all()
+
+    # Convert query results to a dictionary using date as the key and prcp as the value
+    precipitation_dict = {date: prcp for date, prcp in results}
+    return jsonify(precipitation_dict)
+
+@app.route("/api/v1.0/stations")
+def stations():
+    """Return a list of all stations"""
+    results = session.query(Station.station).all()
+
+    # Convert list of tuples into normal list
+    stations_list = list(np.ravel(results))
+    return jsonify(stations_list)
+
+@app.route("/api/v1.0/tobs")
+def tobs():
+    """Return the temperature observations (TOBS) for the last year of the most active station"""
+    # Calculate the date one year from the last date in the database
+    one_year_ago = dt.date(2017, 8, 23) - dt.timedelta(days=365)
+
+    # Query the last year of temperature observation data for the most active station
+    results = session.query(Measurement.tobs).\
+        filter(Measurement.station == 'USC00519281').\
+        filter(Measurement.date >= one_year_ago).all()
+
+    # Convert list of tuples into normal list
+    tobs_list = list(np.ravel(results))
+    return jsonify(tobs_list)
 
 @app.route("/api/v1.0/<start>")
 def start(start):
